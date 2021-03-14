@@ -23,7 +23,7 @@ components = {
 
 function align(text)
     spaces = ""
-    padding = 16 - string.len(tostring(text))
+    padding = 18 - string.len(tostring(text))
     for i = 0, padding, 1 do
         spaces = spaces .. " "
     end
@@ -34,20 +34,24 @@ function status(group)
     if group == "distillers" then
         print(align("distiller") .. align("energy status") .. align("input tank") .. align("output tank") .. align("address"))
         for k, v in pairs(components[group]) do
+            inputTankInfo = v.object.getInputTankInfo()
+            outputTankInfo = v.object.getOutputTankInfo()
             energyPercentage = tostring(v.object.getEnergyStored()/v.object.getMaxEnergyStored()*100) .. "%"
-            inputTankFill = tostring(math.floor(v.object.getInputTankInfo().amount / v.object.getInputTankInfo().capacity*100)) .. "%"
-            outputTankFill = tostring(math.floor(v.object.getOutputTankInfo().amount / v.object.getOutputTankInfo().capacity*100)) .. "%"
-            inputTankContents = tostring(v.object.getInputTankInfo().name)
-            outputTankContents = tostring(v.object.getOutputTankInfo().name)
+            inputTankFill = tostring(math.floor(inputTankInfo.amount / inputTankInfo.capacity*100)) .. "%"
+            outputTankFill = tostring(math.floor(outputTankInfo.amount / outputTankInfo.capacity*100)) .. "%"
+            inputTankContents = tostring(inputTankInfo.name)
+            outputTankContents = tostring(outputTankInfo.name)
             print(align(k) .. align(energyPercentage) .. align(inputTankContents .. " (" .. inputTankFill .. ")") .. align(outputTankContents .. " (" .. outputTankFill .. ")") .. align(v.address))
         end
     elseif group == "turbines" then
         print(align("turbine") .. align("speed") .. align("input tank") .. align("output tank") .. align("address"))
         for k, v in pairs(components[group]) do
-            inputTankFill = tostring(math.floor(v.object.getTankInfo().amount / v.object.getTankInfo().capacity*100)) .. "%"
-            outputTankFill = tostring(math.floor(v.object.getOutputTankInfo().amount / v.object.getOutputTankInfo().capacity*100)) .. "%"
-            inputTankContents = tostring(v.object.getTankInfo().name)
-            outputTankContents = tostring(v.object.getOutputTankInfo().name)
+            tankInfo = v.object.getTankInfo()
+            outputTankInfo = v.object.getOutputTankInfo()
+            inputTankFill = tostring(math.floor(tankInfo.amount / tankInfo.capacity*100)) .. "%"
+            outputTankFill = tostring(math.floor(outputTankInfo.amount / outputTankInfo.capacity*100)) .. "%"
+            inputTankContents = tostring(tankInfo.name)
+            outputTankContents = tostring(outputTankInfo.name)
             speed = tostring(v.object.getSpeed()) .. " RPM"
             print(align(k) .. align(speed) .. align(inputTankContents .. " (" .. inputTankFill .. ")") .. align(outputTankContents .. " (" .. outputTankFill .. ")") .. align(v.address))
         end
@@ -89,5 +93,10 @@ while true do
         status(command[2])
     elseif command[1] == "exit" then
         os.exit()
+
+    elseif command[1] == "enable" then
+        components[command[2]][tonumber(command[3])].object.setEnabled(true)
+    elseif command[1] == "disable" then
+        components[command[2]][tonumber(command[3])].object.setEnabled(false)
     end
 end
