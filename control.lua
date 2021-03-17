@@ -1,102 +1,80 @@
-component = require("component")
-sides = require("sides")
-term = require("term")
-toboolean = require("toboolean")
+local component = require("component")
+local sides = require("sides")
 
-function splitcommand (inputstr, sep)
-    if sep == nil then
-            sep = "%s"
-    end
-    local t={}
-    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-            table.insert(t, str)
-    end
-    return t
+Distiller = {}
+
+function tankInfoToString(percentage)
+    return string.format("%i%%", percentage)
 end
 
-components = {
-    ["distillers"] = {},
-    ["turbines"] = {},
-    ["solar"] = {},
-    ["redstone"] = {},
-}
-
-function align(text)
-    spaces = ""
-    padding = 18 - string.len(tostring(text))
-    for i = 0, padding, 1 do
-        spaces = spaces .. " "
-    end
-    return text .. spaces
+function Distiller:new(address)
+    local o = {}
+    setmetatable(o, self)
+    self.__index = self
+    self.address = address
+    self.proxy = component.proxy(self.address)
+    self.proxy.enableComputerControl(true)
+    return o
 end
 
-function status(group)
-    if group == "distillers" then
-        print(align("distiller") .. align("energy status") .. align("input tank") .. align("output tank") .. align("address"))
-        for k, v in pairs(components[group]) do
-            inputTankInfo = v.object.getInputTankInfo()
-            outputTankInfo = v.object.getOutputTankInfo()
-            energyPercentage = tostring(v.object.getEnergyStored()/v.object.getMaxEnergyStored()*100) .. "%"
-            inputTankFill = tostring(math.floor(inputTankInfo.amount / inputTankInfo.capacity*100)) .. "%"
-            outputTankFill = tostring(math.floor(outputTankInfo.amount / outputTankInfo.capacity*100)) .. "%"
-            inputTankContents = tostring(inputTankInfo.name)
-            outputTankContents = tostring(outputTankInfo.name)
-            print(align(k) .. align(energyPercentage) .. align(inputTankContents .. " (" .. inputTankFill .. ")") .. align(outputTankContents .. " (" .. outputTankFill .. ")") .. align(v.address))
-        end
-    elseif group == "turbines" then
-        print(align("turbine") .. align("speed") .. align("input tank") .. align("output tank") .. align("address"))
-        for k, v in pairs(components[group]) do
-            tankInfo = v.object.getTankInfo()
-            outputTankInfo = v.object.getOutputTankInfo()
-            inputTankFill = tostring(math.floor(tankInfo.amount / tankInfo.capacity*100)) .. "%"
-            outputTankFill = tostring(math.floor(outputTankInfo.amount / outputTankInfo.capacity*100)) .. "%"
-            inputTankContents = tostring(tankInfo.name)
-            outputTankContents = tostring(outputTankInfo.name)
-            speed = tostring(v.object.getSpeed()) .. " RPM"
-            print(align(k) .. align(speed) .. align(inputTankContents .. " (" .. inputTankFill .. ")") .. align(outputTankContents .. " (" .. outputTankFill .. ")") .. align(v.address))
-        end
-    end
+d1 = Distiller:new("9bb9c575-8189-4924-babf-4037c4a19480")
+
+function Distiller:setEnabled(enabled) self.proxy.setEnabled() end
+
+function Distiller:getEnergyPercentage()
+    local value = math.floor(self.proxy.getEnergyStored() / self.proxy.getMaxEnergyStored()) * 100
+    return string.format("%i%%", value)
 end
 
-for k, v in pairs(component.list()) do
-    if v == "it_distiller" then
-        components["distillers"][#components["distillers"]+1] = {
-            address = k,
-            object = component.proxy(k)
-        }
-    end
-    if v == "it_steam_turbine" then
-        components["turbines"][#components["turbines"]+1] = {
-            address = k,
-            object = component.proxy(k)
-        }
-    end
-    if v == "it_solar_tower" then
-        components["solar"][#components["solar"]+1] = {
-            address = k,
-            object = component.proxy(k)
-        }
-    end
-    if v == "redstone" then
-        components["redstone"][#components["redstone"]+1] = {
-            address = k,
-            object = component.proxy(k)
-        }
-    end
+function Distiller:getInputPercentage()
+    local tankInfo = self.proxy.getInputTankInfo()
+    return math.floor(tankInfo.amount / tankInfo.capacity) * 100
 end
 
-
-while true do
-    io.write("> ")
-    command = splitcommand(io.read())
-    if command[1] == "status" then
-        status(command[2])
-    elseif command[1] == "exit" then
-        os.exit()
-
-    elseif command[1] == "enable" then
-        components[command[2]][tonumber(command[3])].object.setEnabled(true)
-    elseif command[1] == "disable" then
-        components[command[2]][tonumber(command[3])].object.setEnabled(false)
-    end
+function Distiller:getOutputPercentage()
+    local tankInfo = self.proxy.getOutputTankInfo()
+    return math.floor(tankInfo.amount / tankInfo.capacity) * 100
 end
+
+function Turbine:new(address)
+    local o = {}
+    setmetatable(o, self)
+    self.__index = self
+    self.address = address
+    self.proxy = component.proxy(self.address)
+    self.proxy.enableComputerControl(true)
+    self.throttle = {
+        speed = 0
+        address = ""
+        side = sides.top
+    }
+    return o
+end
+
+function Turbine:getInputPercentage()
+    local tankInfo = self.proxy.getTankInfo()
+    return math.floor(tankInfo.amount / tankInfo.capacity) * 100
+end
+
+function Turbine:getOutputPercentage()
+    local tankInfo = self.proxy.getOutputTankInfo()
+    return math.floor(tankInfo.amount / tankInfo.capacity) * 100
+end
+
+function Turbine:getSpeed()
+    return self.proxy.getSpeed()
+end
+
+function Turbine:setThrottle(rpm)
+    self.throttle.speed = rpm
+end
+
+function Turbine:setValveAddress(address, side)
+    self.throttle.address = address
+    self.throttle.side = side or sides.top
+end
+
+function Turbine:monitor()
+    while true do
+        
+
