@@ -10,12 +10,11 @@ function tankInfoToString(percentage)
 end
 
 function Distiller:new(address)
-    local o = {}
-    setmetatable(o, self)
     self.__index = self
-    self.address = address
-    self.proxy = component.proxy(self.address)
-    self.proxy.enableComputerControl(true)
+    setmetatable({
+        address = address,
+        proxy = component.proxy(address)
+    }, self)
     return o
 end
 
@@ -81,7 +80,7 @@ function Turbine:monitor()
             local output = math.floor((self.throttle.speed - speed) / 200 * 8)
             self.throttle.proxy.setOutput(self.throttle.side, output)
             print(self.address, speed, output)
-            os.sleep(0.5)
+            os.sleep(1)
         end
     end)
 end
@@ -90,8 +89,30 @@ function Turbine:stopMonitor()
     self.monitorThread:kill()
 end
 
+Light = {}
+
+function Light:new(address)
+    self.__index = self
+    return setmetatable({
+        address = address,
+        proxy = component.proxy(address),
+        side = sides.top
+    }, self)
+end
+
+function Light:setEnabled(enabled)
+    if enabled then
+        self.proxy.setOutput(self.side, 15)
+    else
+        self.proxy.setOutput(self.side, 15)
+    end
+end
+
 local st2 = Turbine:new("79524afe-0aed-4d7e-8361-92804d89f576")
 local st1 = Turbine:new("2b7b198a-7baf-4d40-bece-84952440c15a")
+
+lights = Light:new("f96dbeb0-e24c-490b-ad68-87b08bde5e81")
+lights:setEnabled(true)
 
 st1:setValveAddress("78920de6-827a-4a0a-ae90-6d010bc793af")
 st2:setValveAddress("c0e8ad2a-6bd7-4721-b60d-79aa07202fed")
@@ -104,8 +125,8 @@ for k,v in pairs(Turbine) do
     print(k, v)
 end
 
-st1:setThrottle(200)
-st2:setThrottle(200)
+st1:setThrottle(1700)
+st2:setThrottle(0)
 
 print("doing things..")
 event.pull("key_down")
